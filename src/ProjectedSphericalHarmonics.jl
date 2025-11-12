@@ -1,6 +1,7 @@
 
 using AssociatedLegendrePolynomials
 using FastGaussQuadrature
+using FFTW
 using LinearAlgebra
 using SpecialFunctions
 
@@ -25,20 +26,20 @@ function trigpts(N, dom)
 end
 
 """ Projected spherical discretization of the unit disk """
-function diskpts(Nr, Nθ, rspan, θspan)
+function diskpts(Nr, Nθ, rspan=[0, 1], θspan=[0, 2π])
 
   # Radial grid
-  ϕ, dϕ = legpts(Nr, asin.(rspan))
+  s, ds = legpts(Nr, sqrt.(1 .- rspan.^2))
 
   # Angular grid
   θ, dθ = trigpts(Nθ, θspan)
   
   # Complex coordinates
-  ζ = @. sin(ϕ) * exp(im * θ')
+  ζ = sqrt.(1 .- s.^2) * exp.(im * θ')
   ζ = reshape(ζ, :, 1)
 
   # Volume element
-  dζ = @. (cos(ϕ) * sin(ϕ) * dϕ) * dθ'
+  dζ = -(s .* ds) * dθ'
   dζ = reshape(dζ, :, 1)
 
   return ζ, dζ
@@ -111,7 +112,7 @@ end
 function 𝒮(u, Ω)
 
   # Even expansion of u * w
-  uwₖ = Ω.Y.even' * (u .* Ω.dζ)
+  uwₖ = psh_transform(u .* Ω.w, Ω, kind=:even)
 
   # Compute ∂Ylm∂n
   fₖ = Ω.S .* uwₖ
@@ -125,7 +126,7 @@ end
 function 𝒮inv(f, Ω)
 
   # Even expansion of f
-  fₖ = Ω.Y.even' * (f .* Ω.dζ ./ Ω.w)
+  fₖ = psh_transform(f, Ω, kind=:even)
 
   # Compute weighted coefficients
   uwₖ = (1 ./ Ω.S) .* fₖ
@@ -135,11 +136,11 @@ function 𝒮inv(f, Ω)
 
 end
 
-""" Hypersingular operator """
+""" Hypersingular operator (Δ𝒮) """
 function 𝒩(u, Ω)
 
   # Odd expansion of u
-  uₖ = Ω.Y.odd' * (u .* Ω.dζ ./ Ω.w)
+  uₖ = psh_transform(u, Ω, kind=:odd)
 
   # Compute weighted coefficients
   fwₖ = Ω.N .* uₖ
@@ -154,7 +155,7 @@ end
 function 𝒩inv(f, Ω)
 
   # Weighted odd expansion of f 
-  fwₖ = Ω.Y.odd' * (f .* Ω.dζ)
+  fwₖ = psh_transform(f .* Ω.w, Ω, kind=:odd)
 
   # Compute coefficients
   uₖ = (1 ./ Ω.N) .* fwₖ
@@ -287,8 +288,8 @@ end
 function ∂n(u, Ω)
 
   # Compute even expansion
-  uₖ = Ω.Y.even' * (u .* Ω.dζ ./ Ω.w)
-  
+  uₖ = psh_transform(u, Ω, kind=:even)
+
   # Evaluate on boundary
   return Ω.∂Y∂n.even * uₖ
 
@@ -301,7 +302,7 @@ function disk(M::Int)
   Nθ = 2 * M + 1
 
   # Compute interior grid
-  ζ, dζ = diskpts(Nr, Nθ, [0, 1], [0, 2π])
+  ζ, dζ = diskpts(Nr, Nθ)
 
   # Weight function
   w = sqrt.(1 .- abs2.(ζ))
@@ -351,8 +352,8 @@ function disk(M::Int)
   θ, _ = trigpts(Nθ, [0, 2π])
   X = exp.(im * θ)
 
-  # Compute normal derivative
-  ∂Y∂n = Array{ComplexF64}(undef, length(X), M + 1, 2 * M + 1) #eigenfunctions
+  # Normal derivatives of eigenfunctions on boundary (only even ones are valid)
+  ∂Y∂n = Array{ComplexF64}(undef, length(X), M + 1, 2 * M + 1)
 
   for m = -M : M
 
@@ -370,6 +371,52 @@ function disk(M::Int)
   ∂Y∂n = (even = ∂Y∂n[:, even], odd = ∂Y∂n[:, odd])
 
   # Store
-  return (Y = Y, ∂Y∂n = ∂Y∂n, ζ = ζ, dζ = dζ, w = w, S = S, N = N, odd = odd, even = even, modeIndex = modeIndex)
+  return (Y = Y, ∂Y∂n = ∂Y∂n, ζ = ζ, dζ = dζ, w = w, S = S, N = N, odd = odd, even = even, modes = modes, modeIndex = modeIndex, M = M)
 
+end
+
+
+""" Projected spherical harmonics transform using direct integration """
+function psh_transform_direct(u, Ω; kind=:even)
+
+  # Get basis functions
+  Y = getfield(Ω.Y, kind)
+
+  # Compute coefficients via orthogonality
+  uₖ = Y' * (u .* Ω.dζ ./ Ω.w)
+
+  return uₖ
+
+end
+
+""" Projected spherical harmonics transform using FFT (~10x faster for M = 64)"""
+function psh_transform_fft(u, Ω; kind=:even)
+
+  # Degree of radial expansion
+  M = Ω.M
+
+  # Quadrature weights
+  ζ = @view Ω.ζ[1 : (M + 1)]
+  dζ = @view Ω.dζ[1 : (M + 1)] 
+
+  # Basis functions
+  Y = @view getfield(Ω.Y, kind)[1 : (M + 1), :]
+
+  # Compute transform
+  u = reshape(u, M + 1, 2 * M + 1)
+  uₖ = fft(u, 2)
+  uₖ = Y' * (uₖ .* (dζ ./ sqrt.(1 .- abs2.(ζ))))
+
+  # Get relevant coefficients
+  modes = Ω.modes[getfield(Ω, kind)]
+  azimuthal_modes = [mod(m, 2 * M + 1) + 1 for (_, m) in modes]
+  uₖ = [uₖ[i, j] for (i, j) in enumerate(azimuthal_modes)]
+
+  return uₖ
+  
+end
+
+# Wrapper for PSH transform
+function psh_transform(u, Ω; kind=:even)
+  return psh_transform_fft(u, Ω, kind=kind)
 end

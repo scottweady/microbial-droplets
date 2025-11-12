@@ -33,6 +33,8 @@ ax.Units = 'inches';
 
 ax.Position(3) = 0.45 * fig.PaperSize(1);
 ax.Position(1) = 0.5 * fig.PaperSize(1) - 0.5 * ax.Position(3);
+ax.Position(4) = 0.7 * fig.PaperSize(2);
+ax.Position(2) = 0.5 * fig.PaperSize(2) - 0.5 * ax.Position(4);
 ax.FontSize = 18;
 
 stable = annotation('textbox', 'string', 'stable', 'FontName', 'times', 'EdgeColor', 'none', 'BackgroundColor', 'none', 'FontSize', 18, 'Units', 'inches', 'HorizontalAlignment', 'center');

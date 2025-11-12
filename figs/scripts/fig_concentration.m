@@ -43,12 +43,12 @@ c = reshape(c, [N N]);
 % Plot
 contourf(xx, zz, c, 0 : 0.1 : 1, 'EdgeColor', 'none')
 
+axis equal tight
+
 xlim([-4 4])
 ylim([-4 0])
 xticks(-4 : 2 : 4)
 yticks(-4 : 0)
-
-axis equal tight
 
 xlabel('{\it x}')
 ylabel('{\it z}')

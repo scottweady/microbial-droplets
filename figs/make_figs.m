@@ -3,23 +3,22 @@ mkdir("output")
 cd scripts
 
 fig_axisymmetric
-print("../output/fig_axisymmetric", "-dpdf")
+print("../output/fig-axisymmetric", "-dpdf")
 
 fig_concentration
-print("../output/fig_concentration", "-dpdf")
+print("../output/fig-concentration", "-dpdf")
 
 sol = 'g';
 fig_sigma
-print("../output/fig_sigma_g", "-dpdf")
-
+print("../output/fig-sigma_g", "-dpdf")
 sol = 'b';
 fig_sigma
-print("../output/fig_sigma_b", "-dpdf")
+print("../output/fig-sigma_b", "-dpdf")
 
 fig_stability
-print("../output/fig_stability", "-dpdf")
+print("../output/fig-stability", "-dpdf")
 
 fig_transition
-print("../output/fig_transition", "-dpdf")
+print("../output/fig-transition", "-dpdf")
 
 cd ..

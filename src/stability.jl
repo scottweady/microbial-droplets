@@ -26,7 +26,7 @@ println("Discretizing projected spherical harmonics...")
 # Discretize
 D = disk(M)
 
-# Get points and quadrature weight
+# Get points and quadrature weights
 ζ, dζ = D.ζ, D.dζ
 
 # Radius
