@@ -165,7 +165,18 @@ function 𝒩inv(f, Ω)
 
 end
 
-""" Bilaplace operator """
+""" Inverse laplacian (for debugging, inaccurate)"""
+function 𝒱(u, Ω)
+
+	ζ, dζ = Ω.ζ, Ω.dζ
+	ζt = transpose(ζ)
+	V = @. (1/2π) * log.(abs(ζ - ζt)) * dζ';
+	V[diagind(V)] .= 0
+	return V * u
+
+end
+
+""" Inverse bilaplacian """
 function ℬ(u, Ω)
 
 	ζ, dζ = Ω.ζ, Ω.dζ
@@ -175,7 +186,6 @@ function ℬ(u, Ω)
 	return B * u
 
 end
-
 
 """ Shape derivative of 𝒮 """
 function δ𝒮(u, m, Ω)
@@ -213,6 +223,24 @@ function δ𝒩(u, m, Ω)
 
 end
 
+""" Shape derivative of 𝒱 (for debugging, inaccurate) """
+function δ𝒱(u, m, Ω)
+
+	ζ = Ω.ζ
+	fac = ζ.^0
+	arg = ζ.^m .* u
+	val = 2 * (m + 1) * 𝒱(arg, Ω)
+
+	for _ = 0 : m
+		val += (1 / 2π) * fac .* sum(ones(size(ζ)) .* transpose(arg .* dζ), dims=2)
+		fac .*= ζ
+		arg ./= ζ
+	end
+
+	return val
+
+end
+
 """ Shape derivative of ℬ """
 function δℬ(u, m, Ω)
 
@@ -229,58 +257,6 @@ function δℬ(u, m, Ω)
 	end
 
 	return val
-
-end
-
-
-""" Integral associated with the concentration perturbation """
-function Aₘ(ζ, m; tol=1e-14, maxN=256, N0=16, dN=16)
-
-	# Preallocate
-  val = similar(ζ)
-
-	# Loop over grid points
-  for (n, ζₙ) in enumerate(ζ)
-
-		# Origin
-      if ζₙ == 0
-          val[n] = 0
-          continue
-      end
-
-		# Get limit of integration
-    θmax = asin(abs(ζₙ))
-
-		# Initial number of grid points
-    N = N0
-    prevI = Inf
-    I = 0.0
-
-		# Integrate and refine until convergence
-    while true
-
-      θ, dθ = legpts(N, [0, θmax])
-      I = sum(sin.(θ).^(2 * m + 1) .* dθ)
-
-      if abs(I - prevI) < tol * max(1.0, abs(I))
-        break
-      elseif N >= maxN
-        @warn "Max grid points $maxN reached for ζ = $ζₙ without meeting tolerance $tol"
-        break
-      end
-
-			# Assign current value as previous and refine
-      prevI = I
-      N += dN
-
-    end
-
-		# Store value
-    val[n] = exp(log(I) - m * log(abs2(ζₙ)))
-
-  end
-
-  return val
 
 end
 

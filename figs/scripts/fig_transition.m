@@ -55,7 +55,7 @@ p_b = p_b(:, 1);
 r = x(:, 1);
 
 % Range of Rayleigh numbers
-Ra = 90 : 10 : 130;
+Ra = 95 + 5 * (-2 : 2);
   
 % Color map
 cmap = [0.4 0.8 0.4; ...
@@ -69,7 +69,7 @@ sp1 = subplot(1, 2, 1);
 
   for n = 1 : length(Ra)
 
-    if Ra(n) == 110
+    if n == (length(Ra)+1)/2
       ls = '-';
     else
       ls = '--';
@@ -91,7 +91,7 @@ sp1 = subplot(1, 2, 1);
 sp2 = subplot(1, 2, 2);
   
   for n = 1 : length(Ra)
-    if Ra(n) == 110
+    if n == (length(Ra)+1)/2
       ls = '-';
     else
       ls = '--';

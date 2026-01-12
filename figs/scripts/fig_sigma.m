@@ -30,7 +30,7 @@ plot(m, sigma, 'o-', 'Color', c, 'DisplayName', name), hold on
 plot(m, 0 * m, '--', 'Color', 'k', 'DisplayName', 'none', 'LineWidth', 1, 'HandleVisibility','off')
 plot(m, sigma(end) * (m / m(end)).^0.5, ':', 'Color', [0.2 0.2 0.2], 'DisplayName', '\propto {\it m^{1/2}}')
 xlabel('mode, {\it m}');
-ylabel(strcat('growth rate, ', name))
+ylabel(strcat('stability coefficient, ', name))
 
 xlim([0 40])
 ylim(ys)

@@ -41,8 +41,8 @@ stable = annotation('textbox', 'string', 'stable', 'FontName', 'times', 'EdgeCol
 unstable = annotation('textbox', 'string', 'unstable', 'FontName', 'times', 'EdgeColor', 'none', 'BackgroundColor', 'none', 'FontSize', 18, 'Units', 'inches', 'HorizontalAlignment', 'center');
 
 stable.Position(1) = 0.5 * fig.PaperSize(1) - 0.5 * stable.Position(3);
-stable.Position(2) = 0.9;
+stable.Position(2) = 1.6;
 
 unstable.Position(1) = 0.5 * fig.PaperSize(1) - 0.5 * unstable.Position(3);
-unstable.Position(2) = 2.9;
+unstable.Position(2) = 3.3;
 

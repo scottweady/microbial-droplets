@@ -1,4 +1,5 @@
 
+using Plots
 using DelimitedFiles
 
 include("ProjectedSphericalHarmonics.jl")
@@ -11,6 +12,9 @@ Ra = 1
 
 # Growth rate
 γ = 0
+
+# Absorption rate
+β = 1
 
 # List of wavenumbers
 mspan = collect(0 : 40)
@@ -34,11 +38,10 @@ r = abs.(ζ)
 
 println("Computing base state...")
 
-# O(1) concentration terms
-σ̂ = 4 / μlm(0, 0)
-σ₀ = @. σ̂ / sqrt(1 - r^2)
-𝒱σ₀ = @. σ̂ * (log(1 + sqrt(1 - r^2)) - sqrt(1 - r^2))
-ℬσ₀ = @. σ̂ * (-sqrt(1 - r^2) * ((1/9) * r^2 + (11/36)) + (1 / 4) * r^2 * (log(r) - 1) + ((1 / 4) * r^2 + 1/6) * atanh(sqrt(1 - r^2)) + (1/6) * log(r))
+# O(1) buoyancy terms
+σ₀ = 2β * ones(length(ζ))
+𝒱σ₀ = (β/2) * (r.^2 .- 1)
+ℬσ₀ = (β/8) * (r.^4/4 - r.^2 .- 5/4)
 
 # O(1) pressure terms
 p₀ = -𝒩inv(γ .+ (Ra / 16) * 𝒱σ₀, D)
@@ -47,22 +50,22 @@ p₀ = -𝒩inv(γ .+ (Ra / 16) * 𝒱σ₀, D)
 # O(1) normal velocity
 U₀ = -∂n(𝒮p₀ .+ (Ra / 16) * ℬσ₀, D)
 
+# Save axisymmetric fields
+sol = [real.(ζ)  imag.(ζ)  dζ  real.(p₀)  real.(σ₀)]
+writedlm("results/sol.dat", sol, ' ')
+
 println("Beginning main loop...")
 
 # Loop over mode numbers
 for (nm, m) in enumerate(mspan)
 
-	# O(ϵ) concentration terms
-	σ₁ = -ζ.^m .* σ₀
-
-	if m == 0
-		𝒱σ₁ = 𝒱σ₀ .+ σ̂
-	else
-		𝒱σ₁ = σ̂ * (1 .- (2 * m + 1) / (2 * m) * (sqrt.(1 .- abs2.(ζ)) .+ Aₘ(ζ, m))) .* ζ.^m
-	end
+	# O(ϵ) buoyancy terms
+	σ₁ = zeros(length(ζ))
+	𝒱σ₁ = zeros(length(ζ))
+	δ𝒱σ₀ = β * (abs2.(ζ) .- (m > 0) * (1 / m)) .* ζ.^m
 
 	# O(ϵ) pressure terms
-	p₁ = -𝒩inv(δ𝒩(p₀, m, D) + (Ra / 16) * 𝒱σ₁, D)
+	p₁ = -𝒩inv(δ𝒩(p₀, m, D) + (Ra / 16) * (𝒱σ₁ + δ𝒱σ₀), D)
 	
 	# O(ϵ) normal velocity
 	ψ = 𝒮(p₁, D) .+ δ𝒮(p₀, m, D) .+ (Ra / 16) * (ℬ(σ₁, D) .+ δℬ(σ₀, m, D))
@@ -75,10 +78,6 @@ for (nm, m) in enumerate(mspan)
 	println("(m, σₘ) = ", "($m, ", σₘ[nm], ")")
 
 end
-
-# Save axisymmetric fields
-sol = [real.(ζ)  imag.(ζ)  dζ  real.(p₀)  real.(σ₀)]
-writedlm("results/sol.dat", sol, ' ')
 
 # Save growth rate
 writedlm("results/sigma.dat", [mspan σₘ], ' ')
