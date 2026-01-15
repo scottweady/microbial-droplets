@@ -21,4 +21,7 @@ print("../output/fig-stability", "-dpdf")
 fig_transition
 print("../output/fig-transition", "-dpdf")
 
+fig_convergence
+print("../output/fig-convergence", "-dpdf")
+
 cd ..

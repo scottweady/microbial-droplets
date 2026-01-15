@@ -7,12 +7,12 @@ sigma_g = load('../../data/sigma_g.dat');
 sigma_b = load('../../data/sigma_b.dat');
 
 % Range of wavenumbers
-m = 0 : 40;
+m = 0 : 30;
 Ra_c = (0.5 - sigma_g) ./ sigma_b;
 
 % Trim wavenumber range
-m = m(4 : end);
-Ra_c = Ra_c(4 : end, 2)';
+m = m(4 : (m(end)+1));
+Ra_c = Ra_c(4 : (m(end)+1), 2)';
 
 % Plot
 mm = [m fliplr(m)];
@@ -20,12 +20,12 @@ RRa_c = [Ra_c Ra_c(1) * ones(size(m))];
 fill(mm, RRa_c, [0.4 0.4 0.8].^0.125, 'LineWidth', 2, 'EdgeColor', 'none'), hold on
 plot(m, Ra_c, 'ko-', 'LineWidth', 2)
 
-xlim([3 40])
+xlim([3 30])
 ylim([0 Ra_c(1)])
-xticks([3 10 : 10 : 40])
+xticks([3 10 : 10 : 30])
 
 xlabel('mode, {\it m}')
-ylabel('Rayleigh number, {\it Ra}')
+ylabel('Rayleigh number, \beta{\it Ra}')
 
 % Format
 ax = gca;

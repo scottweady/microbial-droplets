@@ -56,6 +56,7 @@ r = x(:, 1);
 
 % Range of Rayleigh numbers
 Ra = 95 + 5 * (-2 : 2);
+Ra(3) = 96;
   
 % Color map
 cmap = [0.4 0.8 0.4; ...

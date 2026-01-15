@@ -72,7 +72,7 @@ ylabel('pressure, {\it p}')
 % Plot velocity
 sp2 = subplot(1, 2, 2);
 plot(r_ext, u_g, 'Color', [0.4 0.8 0.4], 'DisplayName', 'growth, {\it u_g}'), hold on
-plot(r_ext, 50 * u_b, 'Color', [0.4 0.4 0.8], 'DisplayName', 'buoyancy, {\it u_b}'), hold on
+plot(r_ext, 96 * u_b, 'Color', [0.4 0.4 0.8], 'DisplayName', 'buoyancy, {\it u_b}'), hold on
 plot(r_ext, 0 * r_ext, 'k--', 'LineWidth', 1.5, 'HandleVisibility','off')
 
 ylim([-0.5 0.5])
