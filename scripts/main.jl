@@ -1,64 +1,44 @@
 
 using DelimitedFiles
 using ProjectedSphericalHarmonics
-using Plots
 
 # Create output directory
 isdir("results") || mkdir("results")
 
 # Dimensionless parameters
-# Ra, β, γ = 1, 1, 0
-Ra, β, γ = 0, 1, 1
+Ra, β, γ = 1, 1, 1
 
 # List of wavenumbers
-mspan = collect(0 : 8)
-
-# Preallocate eigenvalues
-σₘ = zeros(length(mspan))
+m = collect(0 : 40)
 
 # Number of modes
 M = 64
 
-println("Discretizing projected spherical harmonics...")
-
 # Discretize
-D = psh_disk(M)
+D = disk(M)
 
 # Get points and quadrature weights
 ζ, dζ = D.ζ, D.dζ
 
-println("Computing base state...")
+# Radius
+r = abs.(ζ)
 
-# O(1) terms
-σ₀ = 2β * ones(length(ζ)) #concentration density
-f₀ = (γ / 2β) * σ₀ .+ (Ra / 16) * 𝒱(σ₀, D)
-p₀ = -𝒩⁻¹(f₀, D) #pressure
-ψ₀ = 𝒮(p₀, D) .+ (Ra / 16) * ℬ(σ₀, D)
-U₀ = -∂n(ψ₀, D) #normal velocity
+# Axisymmetric solution
+σ₀ = 2β * ones(length(ζ))
+
+pg = @. γ * λlm(1, 0) * sqrt(1 - r^2)
+pb = @. -(β * Ra / 96) * λlm(1, 0) * sqrt(1 - r^2) * (1 +  (4 / 3) * (1 - r^2))
 
 # Save axisymmetric fields
-sol = [real.(ζ)  imag.(ζ)  dζ  real.(p₀)  real.(σ₀)]
-writedlm("results/sol.dat", sol, ' ')
+sol_g = [real.(ζ)  imag.(ζ)  dζ  real.(pg)  real.(σ₀)]
+writedlm("results/sol_g.dat", sol_g, ' ')
+sol_b = [real.(ζ)  imag.(ζ)  dζ  real.(pb)  real.(σ₀)]
+writedlm("results/sol_b.dat", sol_b, ' ')
 
-println("Beginning main loop...")
+σg = 1/2 .- m .* λlm(1, 0) .* λlm.(m, m) / 4;
+σb = (β * Ra / 96) * (m .* λlm(1, 0) .* λlm.(m, m) / 4 .- 9 ./ (2 * (m .- 1) .* (2 * m .+ 1)));
+σb[1:2] .= 0.0
 
-# Loop over mode numbers
-for (nm, m) in enumerate(mspan)
-
-	# O(ϵ) terms
-	σ₁ = zeros(length(ζ)) #concentration density
-    f₁ = δ𝒩(p₀, m, D) .+ (γ / 2β) * σ₁ .+ (Ra / 16) * (𝒱(σ₁, D) .+ δ𝒱(σ₀, m, D))
-	p₁ = -𝒩⁻¹(f₁, D) #pressure
-	ψ₁ = 𝒮(p₁, D) .+ δ𝒮(p₀, m, D) .+ (Ra / 16) * (ℬ(σ₁, D) .+ δℬ(σ₀, m, D))
-	U₁ = -(m + 1) * U₀ .- ∂n(ψ₁, D) #normal velocity
-
-	# Store stability coefficient
-	σₘ[nm] = real.(U₁[1]) 
-
-	# Print 
-	println("(m, σₘ) = ", "($m, ", σₘ[nm], ")")
-
-end
-
-# Save stability coefficients
-writedlm("results/sigma_g$(M).dat", [mspan σₘ], ' ')
+# Save growth rate
+writedlm("results/sigma_g.dat", [m σg], ' ')
+writedlm("results/sigma_b.dat", [m σb], ' ')
