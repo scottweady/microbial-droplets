@@ -3,5 +3,8 @@
 
 local
 paper
-scripts/results
+
 figs/output
+scripts/results
+
+
