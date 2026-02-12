@@ -118,7 +118,17 @@ l1 = lines!(ax_b, x, u_b*96, color = color_b, linewidth = 3)
 l2 = lines!(ax_b, x, u_g, color = color_g, linewidth = 3)
 
 
+
+
 fig_b
+
+
+#save values u_b and u_g to a file
+using DelimitedFiles
+data = hcat(x, u_b, u_g)
+write("axisymmetric_inplane_velocity.txt", data)
+
+
 
 
 
