@@ -24,6 +24,9 @@ print("../output/fig-transition", "-dpdf")
 fig_convergence
 print("../output/fig-convergence", "-dpdf")
 
+fig_kappa
+print("../output/fig-kappa", "-dpdf")
+
 close all
 
 cd ..
