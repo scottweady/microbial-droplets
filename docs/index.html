@@ -1,0 +1,960 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Microbial Droplets on Viscous Substrates</title>
+<meta name="description" content="Instability of microbial droplets growing on viscous substrates: model, axisymmetric solutions, linear stability, and code."/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet"/>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet"/>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/contrib/auto-render.min.js"></script>
+<style>
+/* Palette after Documenter's documenter-light / documenter-dark themes,
+   as on the companion surface-growth page. Growth is green, buoyancy is blue. */
+:root {
+  --bg: #ffffff;
+  --side-bg: #f5f5f5;
+  --side-fg: #222222;
+  --side-muted: #555555;
+  --side-active-bg: #ffffff;
+  --side-hover: #ebebeb;
+  --fg: #222222;
+  --muted: #6b6b6b;
+  --link: #2e63b8;
+  --link-hover: #363636;
+  --border: #dbdbdb;
+  --code-bg: #f5f5f5;
+  --code-fg: #222222;
+  --table-head: #f5f5f5;
+  --note-bg: #ebf8ff;
+  --note-border: #209cee;
+  --accent: #389826;
+  --buoy: #4d4db3;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #1f2424;
+    --side-bg: #282f2f;
+    --side-fg: #ececec;
+    --side-muted: #b5b5b5;
+    --side-active-bg: #1f2424;
+    --side-hover: #333c3c;
+    --fg: #ececec;
+    --muted: #a6a6a6;
+    --link: #5b9be8;
+    --link-hover: #ffffff;
+    --border: #5e6d6f;
+    --code-bg: #282f2f;
+    --code-fg: #ececec;
+    --table-head: #282f2f;
+    --note-bg: #1d2e3a;
+    --note-border: #1d72aa;
+    --accent: #6cc04a;
+    --buoy: #9d9df2;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #1f2424;
+  --side-bg: #282f2f;
+  --side-fg: #ececec;
+  --side-muted: #b5b5b5;
+  --side-active-bg: #1f2424;
+  --side-hover: #333c3c;
+  --fg: #ececec;
+  --muted: #a6a6a6;
+  --link: #5b9be8;
+  --link-hover: #ffffff;
+  --border: #5e6d6f;
+  --code-bg: #282f2f;
+  --code-fg: #ececec;
+  --table-head: #282f2f;
+  --note-bg: #1d2e3a;
+  --note-border: #1d72aa;
+  --accent: #6cc04a;
+  --buoy: #9d9df2;
+}
+
+* { box-sizing: border-box; }
+html { font-size: 16px; scroll-behavior: smooth; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: "Lato Medium", "Lato", -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+a { color: var(--link); text-decoration: none; }
+a:hover { color: var(--link-hover); }
+
+/* ── Sidebar ─────────────────────────────────────────────────────────── */
+.sidebar {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  width: 18rem;
+  background: var(--side-bg);
+  color: var(--side-fg);
+  overflow-y: auto;
+  padding: 1.5rem 0 2rem;
+  border-right: 1px solid var(--border);
+  z-index: 20;
+}
+.sidebar .pkg {
+  font-size: 1.35rem; font-weight: 700; text-align: center;
+  padding: 0 1rem; margin-bottom: 1.25rem; line-height: 1.3;
+}
+.sidebar .pkg a { color: var(--side-fg); }
+.sidebar ul { list-style: none; margin: 0; padding: 0; }
+.sidebar > nav > ul > li > a {
+  display: block; padding: 0.45rem 1.25rem; color: var(--side-fg);
+  border-left: 3px solid transparent;
+}
+.sidebar ul ul a {
+  display: block; padding: 0.25rem 1.25rem 0.25rem 2.25rem;
+  font-size: 0.9rem; color: var(--side-muted);
+  border-left: 3px solid transparent;
+}
+.sidebar a:hover { background: var(--side-hover); }
+.sidebar a.active {
+  background: var(--side-active-bg);
+  border-left-color: var(--link);
+  font-weight: 700; color: var(--side-fg);
+}
+.sidebar ul ul { display: none; }
+.sidebar li.open > ul { display: block; }
+
+/* ── Main column ─────────────────────────────────────────────────────── */
+.main { margin-left: 18rem; min-height: 100vh; }
+.topbar {
+  position: sticky; top: 0; z-index: 10;
+  display: flex; align-items: center; gap: 0.75rem;
+  height: 3.5rem; padding: 0 2rem;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+}
+.topbar .crumb { flex: 1; min-width: 0; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.topbar button, .topbar a.icon {
+  background: none; border: 0; color: var(--muted); cursor: pointer;
+  font: inherit; font-size: 0.9rem; padding: 0.35rem 0.5rem; border-radius: 4px;
+  display: inline-flex; align-items: center; gap: 0.35rem;
+}
+.topbar button:hover, .topbar a.icon:hover { color: var(--fg); background: var(--side-hover); }
+.topbar svg { width: 1.1rem; height: 1.1rem; fill: currentColor; }
+#menu-btn { display: none; }
+
+.content { max-width: 52rem; margin: 0 auto; padding: 1.5rem 2rem 4rem; }
+.content h1 { font-size: 2.25rem; line-height: 1.2; margin: 1rem 0 0.5rem; font-weight: 700; }
+.content h2 {
+  font-size: 1.6rem; margin: 3rem 0 1rem; padding-bottom: 0.35rem;
+  border-bottom: 1px solid var(--border); font-weight: 700;
+}
+.content h3 { font-size: 1.25rem; margin: 2rem 0 0.75rem; font-weight: 700; }
+.content h2, .content h3 { scroll-margin-top: 4.5rem; }
+.content h2 a.anchor, .content h3 a.anchor { color: var(--muted); opacity: 0; margin-left: 0.4rem; font-weight: 400; }
+.content h2:hover a.anchor, .content h3:hover a.anchor { opacity: 1; }
+.content p, .content li { font-size: 1rem; }
+.content p { margin: 0 0 1rem; }
+.content ul { padding-left: 1.5rem; }
+.content li { margin-bottom: 0.35rem; }
+.authors { color: var(--muted); margin: 0 0 0.5rem; }
+
+figure.hero { margin: 1rem auto 0.5rem; }
+figure.hero img { width: 26rem; max-width: 92%; margin: 0 auto; border-radius: 6px; }
+figure.hero figcaption { text-align: center; max-width: 34rem; margin: 0.4rem auto 0; }
+/* The schematic comes as fig1-light.png and fig1-dark.png (docs/makeschematic.m); show the one for the theme */
+figure img.fig-dark { display: none; }
+:root[data-theme="dark"] figure img.fig-light { display: none; }
+:root[data-theme="dark"] figure img.fig-dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) figure img.fig-light { display: none; }
+  :root:not([data-theme="light"]) figure img.fig-dark { display: block; }
+}
+
+code, pre { font-family: "JuliaMono", ui-monospace, SFMono-Regular, Menlo, monospace; }
+code { font-size: 0.85em; background: var(--code-bg); padding: 0.1em 0.3em; border-radius: 3px; }
+pre {
+  background: var(--code-bg); color: var(--code-fg);
+  padding: 0.85rem 1rem; border-radius: 4px; overflow-x: auto;
+  font-size: 0.85rem; line-height: 1.5; margin: 0 0 1.25rem;
+  border: 1px solid var(--border);
+}
+pre code { background: none; padding: 0; font-size: inherit; }
+pre .c { color: #228b22; }
+:root[data-theme="dark"] pre .c { color: #7fbf7f; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) pre .c { color: #7fbf7f; } }
+
+.math-display { position: relative; overflow-x: auto; overflow-y: hidden; margin: 0 0 1.25rem; }
+.katex-display { margin: 0.5rem 0; }
+
+figure { margin: 1.5rem 0 2rem; }
+figure img { display: block; width: 100%; height: auto; }
+figcaption { font-size: 0.9rem; color: var(--muted); margin-top: 0.6rem; line-height: 1.45; }
+figcaption b { color: var(--fg); }
+.c-g { color: var(--accent); font-weight: 700; }
+.c-b { color: var(--buoy); font-weight: 700; }
+
+/* ── Interactive widgets ─────────────────────────────────────────────── */
+.widget {
+  border: 1px solid var(--border); border-radius: 6px;
+  padding: 1rem 1.25rem 0.75rem; margin: 0 0 0.6rem;
+}
+.widget .w-title { font-weight: 700; margin-bottom: 0.75rem; }
+.w-ctls { display: flex; flex-wrap: wrap; gap: 0 2rem; }
+.w-ctls .sw-ctl { flex: 1 1 13rem; }
+.sw-ctl { margin-bottom: 1rem; max-width: 26rem; }
+.w-ctls .sw-ctl { max-width: none; }
+.sw-ctl label { display: flex; justify-content: space-between; font-size: 0.92rem; margin-bottom: 0.25rem; }
+.sw-ctl label output { font-variant-numeric: tabular-nums; font-weight: 700; }
+.sw-row { display: flex; align-items: center; gap: 0.5rem; }
+.sw-row input[type=range] { flex: 1; min-width: 0; accent-color: var(--accent); }
+.sw-row button {
+  width: 2rem; height: 2rem; flex: none; border-radius: 50%; cursor: pointer;
+  border: 1px solid var(--border); background: var(--code-bg); color: var(--fg); font-size: 0.75rem;
+}
+.sw-row button:hover { border-color: var(--accent); }
+.sw-read { display: grid; grid-template-columns: auto auto; gap: 0.2rem 1rem; font-size: 0.88rem; margin: 0 0 0.75rem; max-width: 28rem; }
+.sw-read dt { color: var(--muted); }
+.sw-read dd { margin: 0; text-align: right; font-variant-numeric: tabular-nums; }
+
+.rw-panels { display: flex; flex-wrap: wrap; gap: 1rem 1.5rem; }
+.rw-panel { flex: 1 1 16rem; min-width: 0; }
+.rw-plot { position: relative; padding-left: 1.6rem; }
+.rw-plot svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: none; }
+/* inside the frame's top-left corner: the frame starts 46/420 of the way across the SVG */
+.rw-letter { position: absolute; left: calc(1.6rem + (100% - 1.6rem) * 0.1095 + 0.4rem); top: 0.35rem; font-size: 0.85rem; color: var(--muted); z-index: 1; pointer-events: none; }
+.rw-ylabel {
+  position: absolute; left: 0.55rem; top: 46%; transform: translate(-50%, -50%) rotate(-90deg);
+  white-space: nowrap; font-size: 0.85rem; color: var(--muted);
+}
+.rw-xlabel { text-align: center; font-size: 0.85rem; color: var(--muted); padding-left: 2.5rem; margin-top: -0.2rem; }
+.rw-frame { fill: none; stroke: var(--fg); stroke-width: 1.2; }
+.rw-tick { stroke: var(--fg); stroke-width: 1.2; }
+.rw-axes text { fill: var(--muted); font-size: 13px; font-family: inherit; }
+.rw-dash { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.rw-ref { fill: none; stroke: var(--muted); stroke-width: 1.3; opacity: 0.5; }
+.rw-cur, .rw-line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; }
+.rw-guide { stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 3; opacity: 0.7; }
+.rw-dot { fill: var(--accent); stroke: var(--bg); stroke-width: 2; }
+.legend { display: flex; flex-wrap: wrap; gap: 0.2rem 1rem; font-size: 0.85rem; color: var(--muted); padding-left: 2.5rem; margin-top: 0.4rem; }
+.sw { display: inline-block; width: 1.4rem; height: 0; border-top: 2.5px solid; vertical-align: middle; margin-right: 0.35rem; }
+.sw-cur { border-color: var(--accent); }
+.sw-ref { border-color: var(--muted); opacity: 0.6; border-top-width: 1.5px; }
+.sw-ref96 { border-color: var(--muted); opacity: 0.6; border-top-width: 1.5px; border-top-style: dashed; }
+.sw-g { border-color: var(--accent); }
+.sw-b { border-color: var(--buoy); }
+.sw-k { border-color: var(--fg); }
+.sw-dash { border-color: var(--muted); border-top-style: dashed; border-top-width: 1.5px; }
+.sw-box { display: inline-block; width: 0.9rem; height: 0.9rem; vertical-align: -0.1rem; margin-right: 0.35rem; border-radius: 2px; background: color-mix(in srgb, var(--buoy) 22%, var(--bg)); border: 1px solid var(--border); }
+.widget .w-note { font-size: 0.85rem; color: var(--muted); margin: 0.75rem 0 0; line-height: 1.45; }
+
+/* Fig. 3: surface flows */
+.sf-drop { fill: var(--accent); opacity: 0.09; }
+.sf-tag { fill: var(--muted); font-size: 12px; font-family: inherit; }
+.sf-ref96 { stroke-dasharray: 5 4; }
+
+/* Fig. 4: bulk flow */
+.mode { display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden; margin-bottom: 0.9rem; }
+.mode button {
+  font: inherit; font-size: 0.88rem; padding: 0.35rem 0.75rem; cursor: pointer;
+  background: none; color: var(--muted); border: 0;
+}
+.mode button + button { border-left: 1px solid var(--border); }
+.mode button[aria-pressed="true"] { background: var(--code-bg); color: var(--fg); font-weight: 700; }
+.bk-top { display: flex; flex-wrap: wrap; gap: 0 2rem; align-items: flex-end; }
+.bk-top .sw-ctl { flex: 1 1 15rem; }
+.bk-body { display: flex; gap: 0.6rem; align-items: stretch; }
+.bk-main { flex: 1 1 auto; min-width: 0; }
+.bk-frame { position: relative; }
+.bk-frame svg { position: relative; z-index: 1; pointer-events: none; display: block; width: 100%; height: auto; overflow: visible; }
+.bk-canvas { position: absolute; left: 8.8889%; top: 4.1667%; width: 88.8889%; height: 83.3333%; display: block; }
+.sw-cbar { display: flex; flex-direction: column; align-items: flex-start; gap: 0.4rem; padding: 0.2rem 0 2.6rem; }
+.sw-cbar-row { display: flex; align-items: stretch; gap: 0.3rem; flex: 1; }
+.bk-bar { width: 14px; flex: none; align-self: stretch; border-radius: 2px; }
+.sw-ticks { display: flex; flex-direction: column; justify-content: space-between; font-size: 0.8rem; color: var(--muted); line-height: 1; }
+.sw-cbar-label { font-size: 0.85rem; color: var(--muted); white-space: nowrap; font-family: "Times New Roman", serif; }
+
+/* Figs. 5-7: stability */
+.dp-g { fill: none; stroke: var(--accent); stroke-width: 2; }
+.dp-b { fill: none; stroke: var(--buoy); stroke-width: 2.2; }
+.dp-gdot { fill: var(--accent); }
+.dp-bdot { fill: var(--buoy); }
+.dp-unstable { fill: color-mix(in srgb, var(--buoy) 16%, transparent); }
+.dp-on { fill: var(--buoy); stroke: var(--bg); stroke-width: 1.5; }
+.dp-off { fill: var(--bg); stroke: var(--fg); stroke-width: 1.3; }
+.dr-crit { fill: none; stroke: var(--fg); stroke-width: 2; }
+.dr-critdot { fill: var(--fg); }
+.dr-circle { fill: none; stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 4 4; }
+.dr-shape { fill: color-mix(in srgb, var(--accent) 22%, var(--bg)); stroke: var(--accent); stroke-width: 2; stroke-linejoin: round; }
+.dr-foldline { stroke: var(--buoy); stroke-width: 1.2; stroke-dasharray: 2 3; }
+.dr-lin { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 5 4; }
+#dr-a { cursor: crosshair; }
+.dr-shapebox { position: relative; max-width: 300px; margin: 0 auto; }
+.dr-shapebox svg { display: block; width: 100%; height: auto; }
+.dr-shapebox .rw-letter { left: 0.2rem; }
+.dr-cap { text-align: center; font-size: 0.85rem; color: var(--muted); }
+
+/* Fig. 9 */
+.kp-asym { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 6 4; }
+.kp-dot { fill: var(--buoy); }
+.kp-guide { stroke: var(--buoy); }
+
+.admonition {
+  border-left: 5px solid var(--note-border); background: var(--note-bg);
+  border-radius: 4px; padding: 0.75rem 1rem; margin: 0 0 1.25rem;
+}
+.admonition .title { font-weight: 700; margin-bottom: 0.25rem; }
+.admonition p:last-child { margin-bottom: 0; }
+
+.table-wrap { position: relative; overflow-x: auto; margin: 0 0 1.25rem; }
+table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+th, td { text-align: left; padding: 0.45rem 0.75rem; border-bottom: 1px solid var(--border); vertical-align: top; }
+th { background: var(--table-head); font-weight: 700; }
+td.num { font-variant-numeric: tabular-nums; text-align: right; }
+
+.results { counter-reset: r; list-style: none; padding-left: 0; }
+.results li { counter-increment: r; position: relative; padding-left: 2.25rem; margin-bottom: 0.75rem; }
+.results li::before {
+  content: counter(r); position: absolute; left: 0; top: 0.05rem;
+  width: 1.5rem; height: 1.5rem; border-radius: 50%;
+  background: var(--accent); color: #fff; font-size: 0.8rem; font-weight: 700;
+  display: flex; align-items: center; justify-content: center;
+}
+
+footer {
+  border-top: 1px solid var(--border); margin-top: 3rem; padding-top: 1rem;
+  font-size: 0.85rem; color: var(--muted);
+}
+
+/* ── Narrow screens: sidebar becomes a drawer ───────────────────────── */
+@media (max-width: 1055px) {
+  .sidebar { transform: translateX(-100%); transition: transform 0.2s ease; box-shadow: none; }
+  body.menu-open .sidebar { transform: none; box-shadow: 0 0 2rem rgba(0,0,0,0.3); }
+  .main { margin-left: 0; }
+  #menu-btn { display: inline-flex; }
+  .topbar { padding: 0 1rem; }
+  .content { padding: 1rem 1rem 3rem; }
+  .content h1 { font-size: 1.8rem; }
+  .topbar a.icon span { display: none; }
+  .widget { padding: 0.85rem 0.75rem 0.6rem; }
+}
+</style>
+<script>
+  try { var t = localStorage.getItem("md-theme"); if (t) document.documentElement.setAttribute("data-theme", t); } catch (e) {}
+</script>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="pkg"><a href="#top">Microbial droplets</a></div>
+  <nav>
+    <ul>
+      <li><a href="#top">Home</a></li>
+      <li><a href="#model">The model</a>
+        <ul>
+          <li><a href="#equations">Fluid, nutrient and growth</a></li>
+          <li><a href="#dimensionless">Dimensionless groups</a></li>
+        </ul>
+      </li>
+      <li><a href="#integral">Integral formulation</a>
+        <ul>
+          <li><a href="#ide">Equations on the droplet</a></li>
+          <li><a href="#spectral">Operators on the disk</a></li>
+        </ul>
+      </li>
+      <li><a href="#axisymmetric">Axisymmetric solutions</a>
+        <ul>
+          <li><a href="#axi-pressure">Growth and buoyancy</a></li>
+          <li><a href="#surface-flow">Surface flow</a></li>
+          <li><a href="#bulk-flow">Bulk flow</a></li>
+        </ul>
+      </li>
+      <li><a href="#stability">Linear stability</a>
+        <ul>
+          <li><a href="#perturbation">Perturbed disks</a></li>
+          <li><a href="#coefficients">Growth and buoyancy modes</a></li>
+          <li><a href="#criterion">Stability criterion</a></li>
+          <li><a href="#depth">Effect of depth</a></li>
+        </ul>
+      </li>
+      <li><a href="#numerics">Numerical validation</a></li>
+      <li><a href="#citing">Citing</a></li>
+    </ul>
+  </nav>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <button id="menu-btn" aria-label="Open navigation">
+      <svg viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </button>
+    <div class="crumb" id="crumb">Home</div>
+    <a class="icon" href="https://github.com/scottweady/microbial-droplets" title="Source on GitHub">
+      <svg viewBox="0 0 16 16"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      <span>GitHub</span>
+    </a>
+    <button id="theme-btn" title="Toggle light/dark theme" aria-label="Toggle theme">
+      <svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 100 18 9 9 0 000-18zm0 2v14a7 7 0 010-14z"/></svg>
+    </button>
+  </header>
+
+  <article class="content">
+
+<!-- ═══════════════════════════════ HOME ═══════════════════════════════ -->
+<section id="top" data-title="Home">
+<figure class="hero">
+  <img class="fig-light" src="assets/fig1-light.png" alt="Schematic: a green microbial droplet Omega(t) on the flat surface S of a fluid volume V containing dense nutrient particles, with gravity g pointing down"/>
+  <img class="fig-dark" src="assets/fig1-dark.png" alt="Schematic: a green microbial droplet Omega(t) on the flat surface S of a fluid volume V containing dense nutrient particles, with gravity g pointing down"/>
+  <figcaption><b>Figure 1.</b> A microbial droplet $\Omega(t)$ (green) grows on the surface $S$ of a semi-infinite fluid volume $V$ (blue). As it grows it consumes dense nutrients (red), and the resulting density differences drive buoyant flows.</figcaption>
+</figure>
+
+<h1>Instability of microbial droplets growing on viscous substrates</h1>
+<p class="authors">Vicente Gomez Herrera and Scott Weady</p>
+
+<p><a href="https://doi.org/10.1017/jfm.2026.11721"><em>J. Fluid Mech.</em> (2026)</a> · <a href="https://arxiv.org/abs/2602.13724">arXiv:2602.13724</a> · <a href="https://github.com/scottweady/microbial-droplets">Code and data on GitHub</a></p>
+
+<p>Yeast colonies grown on the surface of a viscous fluid start as round, flat "droplets". On less viscous substrates their edges become rough and grow thin fingers. Two mechanisms are at play. Growth pushes on the fluid surface, which spreads the colony outward. Nutrient consumption lightens the fluid beneath the droplet, which drives a buoyant vortex ring in the bulk. This work develops a model that couples both effects and reduces it to a set of integro-differential equations posed on the droplet alone. From these equations it finds an exact, radially expanding solution and determines when that solution becomes unstable.</p>
+
+<p>This page was generated using Claude Opus 5.5 (Anthropic).</p>
+
+<h3 id="results" style="margin-top:1.5rem">Main results</h3>
+<ol class="results">
+  <li><b>A model on the droplet alone.</b> At small Reynolds and Péclet numbers the bulk is governed by linear equations, and the full three-dimensional problem reduces to a system of integral equations on the droplet. The system involves four operators: the single-layer potential, the hypersingular operator, and the volume potentials of the 2D Laplacian and bilaplacian.</li>
+  <li><b>An exact expanding disk.</b> For every metabolic Rayleigh number $Ra$ the circular droplet grows as $R(t) = R_0e^{t/2}$. Its pressure is the sum of a growth part, which is positive, and a buoyancy part, which is negative. Buoyancy creates a vortex ring under the droplet and a peak in the surface velocity at $r \approx 1.1R$. Both features are seen in experiments.</li>
+  <li><b>Growth stabilizes.</b> With growth alone, every non-trivial mode decays, at a rate that grows like $m^{1/2}$ with the wavenumber $m$. On a rigid substrate the rate grows like $m$, so the viscous substrate damps short waves less strongly.</li>
+  <li><b>Buoyancy destabilizes.</b> Buoyant flows amplify every mode $m \ge 3$. The disk is unstable to mode $m$ once $\beta Ra$ exceeds a threshold $\beta Ra_*^m$. This threshold decreases with $m$ towards $96$, the value at which the pressure becomes negative everywhere in the droplet. At the viscosity where instability first appears in experiments, the estimate is $\beta Ra \approx 65$, the same order of magnitude.</li>
+</ol>
+
+<div class="admonition">
+  <div class="title">On this page</div>
+  <p><a href="#model">The model</a> sets out the equations and the dimensionless groups. <a href="#integral">Integral formulation</a> reduces them to the droplet. <a href="#axisymmetric">Axisymmetric solutions</a> and <a href="#stability">Linear stability</a> present the results, with interactive versions of the figures from the paper.</p>
+</div>
+</section>
+
+<!-- ═══════════════════════════════ MODEL ═══════════════════════════════ -->
+<section id="model" data-title="The model">
+<h2>The model<a class="anchor" href="#model">¶</a></h2>
+
+<h3 id="equations">Fluid, nutrient and growth<a class="anchor" href="#equations">¶</a></h3>
+
+<p>The droplet $\Omega(t)$ is a flat domain on the surface $S = \{z = 0\}$ of a Newtonian fluid that fills $V = \{z &lt; 0\}$ (<a href="#top">Fig. 1</a>). The fluid has viscosity $\mu$, and its density $\rho = \rho_0(1 + \alpha c)$ increases with the nutrient concentration $c$. In the Boussinesq approximation the velocity $\mathbf{U}$, pressure $P$ and concentration satisfy</p>
+
+<div class="math-display">$$
+\begin{aligned}
+\rho_0\big(\partial_t\mathbf{U} + \mathbf{U}\cdot\nabla\mathbf{U}\big) &= -\nabla P + \mu\Delta\mathbf{U} - \rho_0\alpha c\,g\,\mathbf{e}_z, & \nabla\cdot\mathbf{U} &= 0, \\
+\partial_t c + \nabla\cdot(c\,\mathbf{U}) &= D\,\Delta c && \text{in } V .
+\end{aligned}
+$$</div>
+
+<p>On the droplet the cells grow at an areal rate $\gamma(c)$, so the surface velocity $\mathbf{u}$ satisfies $\nabla_{2D}\cdot\mathbf{u} = \gamma(c)$. The growth pressure $p$ is balanced by the viscous traction $\mathbf{f}$ of the fluid. The surface stays flat, and the cells do not slip on the fluid:</p>
+
+<div class="math-display">$$
+T[\mathbf{f}] = -\nabla_{2D}\,p, \qquad T[\mathbf{U}] = \mathbf{u}, \qquad \mathbf{U}\cdot\mathbf{e}_z = 0 \quad \text{on } \Omega, \qquad p = 0 \ \text{ on } \partial\Omega,
+$$</div>
+
+<p>where $T$ takes the tangential part of a vector on the surface. Off the droplet the surface is traction-free, with no nutrient flux, and $c \to c_\infty$ far away. On the droplet, conservation of mass between cells and nutrient gives the flux condition $D\,\partial_z c = -\rho_b\,\gamma(c)$, with $\rho_b$ the areal cell density. The boundary moves with the normal surface velocity, $\partial_t\boldsymbol{\Gamma} = (\mathbf{u}\cdot\hat{\mathbf{n}})\hat{\mathbf{n}}$. Line tension is neglected, which the paper estimates is reasonable for wavenumbers up to $m \ll 30$–$300$. The analysis below takes the nutrient-rich case $\gamma = 1$.</p>
+
+<h3 id="dimensionless">Dimensionless groups<a class="anchor" href="#dimensionless">¶</a></h3>
+
+<p>Lengths are scaled by the initial radius $\ell_c$, time by the growth time $t_c = 1/\gamma_\infty$, pressure by $\mu/t_c$ and concentration by $c_\infty$. Four dimensionless groups appear:</p>
+
+<div class="math-display">$$
+Re = \frac{\rho_0\ell_c^2}{\mu t_c}, \qquad
+Pe = \frac{\ell_c^2}{D t_c}, \qquad
+Ra = \frac{\rho_0\alpha c_\infty g\,\ell_c t_c}{\mu}, \qquad
+\beta = \frac{\rho_b\gamma_\infty\ell_c}{c_\infty D}.
+$$</div>
+
+<p>$Ra$ is the <em>metabolic Rayleigh number</em>. It compares buoyancy forces to growth forces and is inversely proportional to the viscosity. $\beta$ measures how strongly the droplet depletes the nutrient. For the experiments of Atis et al. (2019), with $\ell_c \approx 2.5$ mm, $t_c \approx 1$ day, $\mu \approx 450$ Pa s and $D \approx 2.4\times10^{-4}$ mm²/s, $Re \approx 1.6\times10^{-10}$ and $Pe \approx 0.3$. With $\alpha c_\infty \approx 0.01$ and a nutrient depletion length of about 2 mm, $Ra \approx 50$ and $\beta \approx 1.3$. With $Re, Pe \ll 1$ the bulk reduces to forced Stokes flow and a harmonic concentration,</p>
+
+<div class="math-display">$$
+-\nabla P + \Delta\mathbf{U} - Ra\,c\,\mathbf{e}_z = \mathbf{0}, \qquad \nabla\cdot\mathbf{U} = 0, \qquad \Delta c = 0 \quad \text{in } V,
+$$</div>
+
+<p>with flux condition $\partial_z c = -\beta\gamma(c)$ on $\Omega$. All of the nonlinearity and time dependence now comes from the moving domain.</p>
+
+</section>
+
+<!-- ═══════════════════════════════ INTEGRAL ═══════════════════════════════ -->
+<section id="integral" data-title="Integral formulation">
+<h2>Integral formulation<a class="anchor" href="#integral">¶</a></h2>
+
+<p>The reduced bulk equations are linear, so they can be solved by a Fourier transform in the plane of the surface. At $z = 0$ this gives a balance between the surface velocity, the growth pressure and the surface concentration:</p>
+
+<div class="math-display">$$
+\hat{\mathbf{u}}_0 = i\mathbf{k}\Big(-\frac{\widehat{\chi_\Omega p}}{2k} + \frac{Ra}{8k^3}\,\hat c_0\Big).
+$$</div>
+
+<p>The concentration is written as a single-layer potential with an unknown density $\sigma$ on the droplet, $c(\mathbf{X}) = 1 - \frac{1}{4\pi}\int_\Omega \sigma(\mathbf{y})\,|\mathbf{X} - \mathbf{y}|^{-1}\,\mathrm{d}\mathbf{y}$. This form is harmonic, has no flux off the droplet, and tends to 1 far away.</p>
+
+<h3 id="ide">Equations on the droplet<a class="anchor" href="#ide">¶</a></h3>
+
+<p>Inverting the transform gives a closed system for the velocity $\mathbf{u}$, pressure $p$ and density $\sigma$, posed only on $\Omega$:</p>
+
+<div class="math-display">$$
+\begin{aligned}
+\mathbf{u} + \nabla\Big(\mathcal{S}_\Omega[p] + \frac{Ra}{16}\,\mathcal{B}_{\Omega,\kappa}[\sigma]\Big) &= \mathbf{0},\\
+\nabla\cdot\mathbf{u} - \frac{\sigma}{2\beta} &= 0,\\
+\sigma - 2\beta\gamma\big(1 - \mathcal{S}_\Omega[\sigma]\big) &= 0,
+\end{aligned}
+$$</div>
+
+<p>with the single-layer potential of the 3D Laplacian and the volume potential of the 2D bilaplacian,</p>
+
+<div class="math-display">$$
+\mathcal{S}_\Omega[\nu](\mathbf{x}) = \frac{1}{4\pi}\int_\Omega \frac{\nu(\mathbf{y})}{|\mathbf{x}-\mathbf{y}|}\,\mathrm{d}\mathbf{y},
+\qquad
+\mathcal{B}_{\Omega,\kappa}[\nu](\mathbf{x}) = \frac{1}{8\pi}\int_\Omega |\mathbf{x}-\mathbf{y}|^2\Big[\log\frac{|\mathbf{x}-\mathbf{y}|}{R(\Omega)} - 1 + \kappa\Big]\nu(\mathbf{y})\,\mathrm{d}\mathbf{y}.
+$$</div>
+
+<p>The constant $\kappa$ is set by the far field and acts as an effective depth (<a href="#depth">see below</a>). The main analysis takes $\kappa = 0$, which corresponds to a depth of about one droplet radius. Taking the divergence of the first equation eliminates $\mathbf{u}$ and leaves</p>
+
+<div class="math-display">$$
+\mathcal{N}_\Omega[p] = -\Big(\frac{\sigma}{2\beta} + \frac{Ra}{16}\,\mathcal{V}_{\Omega,\kappa}[\sigma]\Big),
+$$</div>
+
+<p>where $\mathcal{N}_\Omega = \Delta\mathcal{S}_\Omega$ is the hypersingular operator, with kernel $|\mathbf{x}-\mathbf{y}|^{-3}/4\pi$ taken as a Hadamard finite part, and $\mathcal{V}_{\Omega,\kappa} = \Delta\mathcal{B}_{\Omega,\kappa}$ is the logarithmic volume potential. The density can be found first, then the pressure, then the velocity. On a rigid substrate the analogous model is $\mathbf{u} = -\nabla p$. On a fluid, the pressure instead acts on the droplet nonlocally through $\mathcal{S}_\Omega$.</p>
+
+<h3 id="spectral">Operators on the disk<a class="anchor" href="#spectral">¶</a></h3>
+
+<p>On the unit disk $D$ the operators are diagonalized by the projected spherical harmonics $y_\ell^m(\mathbf{x}) \propto P_\ell^{|m|}\big(\sqrt{1-r^2}\big)e^{im\theta}$. With the weight $\omega = \sqrt{1 - r^2}$,</p>
+
+<div class="math-display">$$
+\mathcal{S}_D\Big[\frac{y_\ell^m}{\omega}\Big] = \frac{\lambda_\ell^m}{4}\,y_\ell^m \ \ (\ell + m \text{ even}),
+\qquad
+\mathcal{N}_D\big[y_\ell^m\big] = -\frac{1}{\lambda_\ell^m}\,\frac{y_\ell^m}{\omega} \ \ (\ell + m \text{ odd}),
+$$</div>
+
+<p>with generalized eigenvalues</p>
+
+<div class="math-display">$$
+\lambda_\ell^m = \frac{\Gamma\big(\tfrac{\ell+m+1}{2}\big)\,\Gamma\big(\tfrac{\ell-m+1}{2}\big)}{\Gamma\big(\tfrac{\ell+m}{2}+1\big)\,\Gamma\big(\tfrac{\ell-m}{2}+1\big)} .
+$$</div>
+
+<p>These relations, together with closed forms for $\mathcal{V}_D$ and $\mathcal{B}_D$ applied to $\zeta^m$, give every solution below exactly.</p>
+</section>
+
+<!-- ═══════════════════════════════ AXISYMMETRIC ═══════════════════════════════ -->
+<section id="axisymmetric" data-title="Axisymmetric solutions">
+<h2>Axisymmetric solutions<a class="anchor" href="#axisymmetric">¶</a></h2>
+
+<h3 id="axi-pressure">Growth and buoyancy<a class="anchor" href="#axi-pressure">¶</a></h3>
+
+<p>Because the equations are linear, the pure-growth problem ($Ra = 0$) and the buoyancy-dominated limit ($Ra \to \infty$) can be solved separately and then added. On a disk of radius $R$ with $\gamma = 1$, the density is $\sigma = 2\beta$ and</p>
+
+<div class="math-display">$$
+p(\mathbf{x}) = R\,p_g'(\mathbf{x}/R) + R^3\beta Ra\;p_b'(\mathbf{x}/R),
+\qquad
+p_g'(\mathbf{x}) = \lambda_1^0\,\omega,
+\qquad
+p_b'(\mathbf{x}) = -\frac{\lambda_1^0\,\omega}{96}\Big(1 + \frac{4}{3}\,\omega^2\Big),
+$$</div>
+
+<p>with $\lambda_1^0 = 4/\pi$ and $\omega = \sqrt{1 - |\mathbf{x}|^2}$. The growth pressure is positive and the buoyancy pressure is negative. The velocity on the droplet is $\mathbf{u} = \mathbf{x}/2$ for every $Ra$, so the droplet stays a disk and grows as $R(t) = R_0e^{t/2}$. The buoyancy part of the velocity vanishes on the droplet: buoyancy moves the surrounding fluid but not the disk itself.</p>
+
+<h3 id="surface-flow">Surface flow<a class="anchor" href="#surface-flow">¶</a></h3>
+
+<figure>
+<div class="widget" id="surface-widget">
+  <div class="w-title">Pressure and surface velocity of the expanding disk, $\beta = 1$, $R = 1$</div>
+  <div class="sw-ctl">
+    <label for="sf-ra"><span>metabolic Rayleigh number, $\beta Ra$</span><output id="sf-ra-val"></output></label>
+    <div class="sw-row"><input type="range" id="sf-ra" min="0" max="150" step="1" value="50"/><button id="sf-play" aria-label="Play Rayleigh number">▶</button></div>
+  </div>
+  <dl class="sw-read">
+    <dt>pressure at the centre, $p(0)$</dt><dd id="sf-p0"></dd>
+    <dt>edge coefficient, $\lambda_1^0(1 - \beta Ra/96)$</dt><dd id="sf-edge"></dd>
+    <dt>velocity maximum outside the droplet</dt><dd id="sf-umax"></dd>
+  </dl>
+  <div class="rw-panels">
+    <div class="rw-panel">
+      <div class="rw-plot">
+        <span class="rw-letter">(a)</span>
+        <div class="rw-ylabel">pressure, $p$</div>
+        <svg id="sf-a" viewBox="0 0 420 300" role="img" aria-label="Pressure against radius on the droplet for the chosen Rayleigh number"></svg>
+      </div>
+      <div class="rw-xlabel">radius, $r$</div>
+    </div>
+    <div class="rw-panel">
+      <div class="rw-plot">
+        <span class="rw-letter">(b)</span>
+        <div class="rw-ylabel">radial velocity, $u$</div>
+        <svg id="sf-b" viewBox="0 0 420 300" role="img" aria-label="Radial surface velocity against radius, inside and outside the droplet"></svg>
+      </div>
+      <div class="rw-xlabel">radius, $r$</div>
+    </div>
+  </div>
+  <div class="legend">
+    <span><span class="sw sw-cur"></span>chosen $\beta Ra$</span>
+    <span><span class="sw sw-ref"></span>$\beta Ra = 0$ (growth only)</span>
+    <span><span class="sw sw-ref96"></span>$\beta Ra = 96$</span>
+  </div>
+</div>
+  <figcaption><b>Figure 3.</b> (a) Pressure on the droplet and (b) radial velocity on the surface, inside ($r &lt; 1$, shaded) and outside the droplet, for the chosen $\beta Ra$ (green). Grey curves show pure growth and the threshold $\beta Ra = 96$. Inside the droplet $u = r/2$ for every $\beta Ra$. With growth alone, the outer velocity decays from $1/2$ like $r^{-2}$. Buoyancy pulls the outer fluid back, and near $\beta Ra = 96$ a maximum appears just outside the edge (marker), at $r \approx 1.1$ for strong buoyancy, as in the experiments. At $\beta Ra = 96$ the edge coefficient changes sign: above it, the pressure is negative everywhere in the droplet and its normal derivative at the edge reverses (Fig. 8 of the paper). Far from the droplet the buoyant velocity grows like $r\log r$. This is a Stokes-paradox artefact of the semi-infinite, zero-$Re$ limit, which is why $\kappa$ is needed. Move the slider or press play.</figcaption>
+</figure>
+
+<h3 id="bulk-flow">Bulk flow<a class="anchor" href="#bulk-flow">¶</a></h3>
+
+<p>The flow in the bulk is the same superposition, $\mathbf{U} = \mathbf{U}_g + \beta Ra\,\mathbf{U}_b$. Growth alone gives a stagnation-point flow: fluid is drawn up from below and pushed out along the surface. Buoyancy alone gives a vortex ring whose core sits near the droplet edge, with a lower stagnation point on the axis near $z \approx -1$; the constant $\kappa$ sets the position of this point. The nutrient is depleted near the droplet and recovers along nested, roughly ellipsoidal contours that become circular far away.</p>
+
+<figure>
+<div class="widget" id="bulk-widget">
+  <div class="w-title">Cross-section of the flow beneath the droplet, $\kappa = 0$, $\beta = 1$</div>
+  <div class="bk-top">
+    <div class="sw-ctl">
+      <label for="bk-ra"><span>metabolic Rayleigh number, $\beta Ra$</span><output id="bk-ra-val"></output></label>
+      <div class="sw-row"><input type="range" id="bk-ra" min="0" max="42" step="1" value="21"/><button id="bk-play" aria-label="Play Rayleigh number">▶</button></div>
+    </div>
+    <div class="mode" role="group" aria-label="Colour by">
+      <button type="button" data-bk-mode="speed" aria-pressed="true">speed</button>
+      <button type="button" data-bk-mode="conc" aria-pressed="false">nutrient</button>
+    </div>
+  </div>
+  <div class="bk-body">
+    <div class="bk-main">
+      <div class="rw-plot">
+        <div class="rw-ylabel" style="top:44%">depth, $z$</div>
+        <div class="bk-frame">
+          <canvas class="bk-canvas" role="img" aria-label="Streamlines of the bulk flow beneath the droplet, coloured by speed or by nutrient concentration"></canvas>
+          <svg id="bk-axes" viewBox="0 0 450 240" aria-hidden="true"></svg>
+        </div>
+      </div>
+      <div class="rw-xlabel">$x$</div>
+    </div>
+    <div class="sw-cbar">
+      <div class="sw-cbar-label" id="bk-bar-label"></div>
+      <div class="sw-cbar-row">
+        <div class="bk-bar" aria-hidden="true"></div>
+        <div class="sw-ticks"><span>1</span><span>0.5</span><span>0</span></div>
+      </div>
+    </div>
+  </div>
+  <dl class="sw-read" style="margin-top:0.6rem">
+    <dt>flow on the axis just below the droplet</dt><dd id="bk-axis"></dd>
+    <dt>stagnation point on the axis</dt><dd id="bk-stag"></dd>
+  </dl>
+</div>
+  <figcaption><b>Figure 4.</b> Streamlines in the plane $y = 0$ under the droplet (bar, $|x| &lt; 1$), coloured by the speed relative to its maximum, or by the nutrient concentration $c$ (Fig. 2 of the paper; $c$ does not depend on $Ra$). At $\beta Ra = 0$ fluid rises on the axis and spreads out under the surface. As $\beta Ra$ increases, a vortex ring forms under the droplet and the flow on the axis reverses. The right end of the slider ($\infty$) shows the buoyancy-only flow $\mathbf{U}_b$. $\beta Ra$ steps through 0 and 41 values from 1 to $10^4$, evenly spaced on a log scale.</figcaption>
+</figure>
+</section>
+
+<!-- ═══════════════════════════════ STABILITY ═══════════════════════════════ -->
+<section id="stability" data-title="Linear stability">
+<h2>Linear stability<a class="anchor" href="#stability">¶</a></h2>
+
+<h3 id="perturbation">Perturbed disks<a class="anchor" href="#perturbation">¶</a></h3>
+
+<p>Perturb the edge of the expanding disk with wavenumber $m$ and small relative amplitude $\varepsilon(t)$:</p>
+
+<div class="math-display">$$
+\boldsymbol{\Gamma}^m(\theta, t) = R(t)\Big[\big(1 + \varepsilon\cos m\theta\big)\hat{\mathbf{r}} + \varepsilon\sin m\theta\,\hat{\boldsymbol{\theta}}\Big].
+$$</div>
+
+<p>This is the image of the unit circle under the conformal map $f_\varepsilon(\zeta) = R(\zeta + \varepsilon\zeta^{m+1})$. Pulling the integral operators back to the unit disk through $f_\varepsilon$ keeps the form of their singular kernels. Their shape derivatives can then be evaluated exactly with the eigenfunction identities above. The normal velocity of the perturbed edge is</p>
+
+<div class="math-display">$$
+\mathbf{u}\cdot\hat{\mathbf{n}} = R\Big(\frac12 + \varepsilon\big(\sigma_g^m + R^2\beta Ra\,\sigma_b^m\big)\cos m\theta\Big) + O(\varepsilon^2).
+$$</div>
+
+<h3 id="coefficients">Growth and buoyancy modes<a class="anchor" href="#coefficients">¶</a></h3>
+
+<p>The two stability coefficients are</p>
+
+<div class="math-display">$$
+\sigma_g^m = \frac12 - m\,\frac{\lambda_1^0\lambda_m^m}{4},
+\qquad
+\sigma_b^m = \frac{1}{96}\Big[m\,\frac{\lambda_1^0\lambda_m^m}{4} - \frac{9}{2(m-1)(2m+1)}\Big] \ \ (m \ge 2),
+$$</div>
+
+<p>where $\lambda_m^m = \Gamma(m + \frac12)\,\Gamma(\frac12)/\Gamma(m+1)$ and $\lambda_1^0 = 4/\pi$.</p>
+
+<p>For growth, $\sigma_g^0 = 1/2$ is the dilation of the disk and $\sigma_g^1 = 0$ is a translation. Every other mode has $\sigma_g^m &lt; 0$, and $\sigma_g^m \sim -m^{1/2}$ for large $m$. On a rigid substrate, where $\mathbf{u} = -\nabla p$, the same calculation gives $\sigma^m_{g,\mathrm{rigid}} = -(m-1)/2$, which is linear in $m$. For buoyancy, $\sigma_b^0 = \sigma_b^1 = 0$ by scale and translation invariance, and $\sigma_b^2 &lt; 0$. Every mode $m \ge 3$ has $\sigma_b^m &gt; 0$, also growing like $m^{1/2}$.</p>
+
+<figure>
+<div class="widget" id="disp-widget">
+  <div class="w-title">Stability coefficients and short-time growth rate</div>
+  <div class="sw-ctl">
+    <label for="dp-ra"><span>metabolic Rayleigh number, $\beta Ra$</span><output id="dp-ra-val"></output></label>
+    <div class="sw-row"><input type="range" id="dp-ra" min="0" max="200" step="1" value="100"/><button id="dp-play" aria-label="Play Rayleigh number">▶</button></div>
+  </div>
+  <dl class="sw-read">
+    <dt>unstable modes ($m \le 30$)</dt><dd id="dp-unst"></dd>
+    <dt>rate of mode 3, $s_3$</dt><dd id="dp-s3"></dd>
+    <dt>rate of mode 30, $s_{30}$</dt><dd id="dp-s30"></dd>
+  </dl>
+  <div class="rw-panels">
+    <div class="rw-panel">
+      <div class="rw-plot">
+        <span class="rw-letter">(a)</span>
+        <div class="rw-ylabel">stability coefficient</div>
+        <svg id="dp-a" viewBox="0 0 420 300" role="img" aria-label="Growth and buoyancy stability coefficients against mode number"></svg>
+      </div>
+      <div class="rw-xlabel">mode, $m$</div>
+      <div class="legend">
+        <span><span class="sw sw-g"></span>$\sigma_g^m$</span>
+        <span><span class="sw sw-b"></span>$96\,\sigma_b^m$</span>
+      </div>
+    </div>
+    <div class="rw-panel">
+      <div class="rw-plot">
+        <span class="rw-letter">(b)</span>
+        <div class="rw-ylabel">growth rate, $s_m$</div>
+        <svg id="dp-b" viewBox="0 0 420 300" role="img" aria-label="Short-time growth rate against mode number for the chosen Rayleigh number"></svg>
+      </div>
+      <div class="rw-xlabel">mode, $m$</div>
+      <div class="legend">
+        <span><span class="sw sw-cur"></span>chosen $\beta Ra$</span>
+        <span><span class="sw sw-ref"></span>$\beta Ra = 0$</span>
+      </div>
+    </div>
+  </div>
+</div>
+  <figcaption><b>Figures 5 and 6.</b> (a) The growth coefficient $\sigma_g^m$ (green) is negative for $m \ge 2$, so growth is stabilizing. The buoyancy coefficient $\sigma_b^m$ (blue, scaled by 96) is positive for $m \ge 3$, so buoyancy is destabilizing. Both grow like $m^{1/2}$. (b) The short-time growth rate of the relative amplitude, $s_m = \sigma_g^m - \tfrac12 + \beta Ra\,\sigma_b^m$. Filled markers are unstable modes ($s_m &gt; 0$). Above $\beta Ra = 96$ the shortest waves are unstable first, and $s_m$ increases without bound with $m$. Move the slider or press play.</figcaption>
+</figure>
+
+<h3 id="criterion">Stability criterion<a class="anchor" href="#criterion">¶</a></h3>
+
+<p>Adding a tangential velocity, which does not change the shape, makes the perturbation ansatz consistent at $O(\varepsilon)$. This gives $\dot R = R/2$ and</p>
+
+<div class="math-display">$$
+\frac{\mathrm{d}\varepsilon}{\mathrm{d}t} = \Big(-\frac12 + \sigma_g^m + e^{t}\beta Ra\,\sigma_b^m\Big)\varepsilon
+\quad\Longrightarrow\quad
+\varepsilon(t) = \varepsilon_0\exp\!\Big[\big(\sigma_g^m - \tfrac12\big)t + \beta Ra\,\sigma_b^m\big(e^t - 1\big)\Big],
+$$</div>
+
+<p>with $R(0) = 1$. At short times, mode $m \ge 3$ grows when</p>
+
+<div class="math-display">$$
+\beta Ra &gt; \beta Ra_*^m = \frac{1/2 - \sigma_g^m}{\sigma_b^m} = \frac{96}{1 - \dfrac{18}{m(m-1)(2m+1)\,\lambda_1^0\lambda_m^m}} ,
+$$</div>
+
+<p>which decreases with $m$ from $146$ at $m = 3$ towards $96$ as $m \to \infty$. This limit is exactly the value at which the axisymmetric pressure becomes negative everywhere in the droplet. Physically, a negative pressure acts to compress the droplet, which the growth constraint forbids. The factor $e^t$ in the growth rate is $R(t)^2$: as the droplet grows, the effective Rayleigh number $\beta Ra\,R^2$ grows with it.</p>
+
+<figure>
+<div class="widget" id="drop-widget">
+  <div class="w-title">Evolution of a perturbed droplet</div>
+  <div class="w-ctls">
+    <div class="sw-ctl">
+      <label for="dr-m"><span>mode, $m$</span><output id="dr-m-val"></output></label>
+      <div class="sw-row"><input type="range" id="dr-m" min="2" max="30" step="1" value="6"/></div>
+    </div>
+    <div class="sw-ctl">
+      <label for="dr-ra"><span>metabolic Rayleigh number, $\beta Ra$</span><output id="dr-ra-val"></output></label>
+      <div class="sw-row"><input type="range" id="dr-ra" min="0" max="200" step="1" value="80"/></div>
+    </div>
+    <div class="sw-ctl">
+      <label for="dr-t"><span>time, $t$</span><output id="dr-t-val"></output></label>
+      <div class="sw-row"><input type="range" id="dr-t" min="0" max="4" step="0.01" value="1.2"/><button id="dr-play" aria-label="Play time">▶</button></div>
+    </div>
+  </div>
+  <div class="rw-panels">
+    <div class="rw-panel">
+      <div class="rw-plot">
+        <span class="rw-letter">(a)</span>
+        <div class="rw-ylabel">$\beta Ra$</div>
+        <svg id="dr-a" viewBox="0 0 420 300" role="img" aria-label="Stability diagram in the plane of mode number and Rayleigh number; click or drag to choose both"></svg>
+      </div>
+      <div class="rw-xlabel">mode, $m$</div>
+    </div>
+    <div class="rw-panel">
+      <div class="dr-shapebox">
+        <span class="rw-letter">(b)</span>
+        <svg id="dr-b" viewBox="0 0 300 300" role="img" aria-label="Droplet outline at the chosen time, scaled by its radius"></svg>
+      </div>
+      <div class="dr-cap">droplet at time $t$, $\varepsilon_0 = 0.02$; dashed: initial disk</div>
+    </div>
+  </div>
+  <div class="rw-panels" style="margin-top:0.75rem">
+    <div class="rw-panel">
+      <div class="rw-plot">
+        <span class="rw-letter">(c)</span>
+        <div class="rw-ylabel">amplitude, $\varepsilon/\varepsilon_0$</div>
+        <svg id="dr-c" viewBox="0 0 420 300" role="img" aria-label="Perturbation amplitude against time"></svg>
+      </div>
+      <div class="rw-xlabel">time, $t$</div>
+      <div class="legend">
+        <span><span class="sw sw-cur"></span>$\varepsilon(t)/\varepsilon_0$</span>
+        <span><span class="sw sw-dash"></span>short-time, $e^{s_m t}$</span>
+      </div>
+    </div>
+    <div class="rw-panel">
+      <dl class="sw-read" style="margin-top:0.5rem">
+        <dt>short-time rate, $s_m$</dt><dd id="dr-s"></dd>
+        <dt>threshold, $\beta Ra_*^m$</dt><dd id="dr-crit"></dd>
+        <dt>amplitude, $\varepsilon(t)/\varepsilon_0$</dt><dd id="dr-eps"></dd>
+        <dt>radius, $R(t) = e^{t/2}$</dt><dd id="dr-R"></dd>
+        <dt>growth rate turns positive</dt><dd id="dr-tstar"></dd>
+        <dt>edge folds, $\varepsilon(m+1) = 1$</dt><dd id="dr-fold"></dd>
+      </dl>
+      <p class="w-note">Legend for (a): <span class="sw-box"></span>unstable at short times. The black curve is $\beta Ra_*^m$, and the dashed line is its limit, 96.</p>
+    </div>
+  </div>
+</div>
+  <figcaption><b>Figure 7.</b> (a) Stable (white) and unstable (shaded) regions at short times in the $(m, \beta Ra)$ plane, with the threshold $\beta Ra_*^m$ (black). Click or drag to choose $m$ and $\beta Ra$. (b) The droplet at time $t$, drawn at its true size $R(t) = e^{t/2}$ from an initial amplitude $\varepsilon_0 = 0.02$; the dashed circle is the initial disk. (c) The amplitude from the exact linear solution (green), against the short-time approximation (dashed). The edge is the image of the unit circle under $f(\zeta) = R(\zeta + \varepsilon\zeta^{m+1})$, which develops cusps when $\varepsilon(m+1) = 1$ (dotted line) and would fold over itself after, so time stops there. Below the threshold the perturbation first decays. If $\sigma_b^m &gt; 0$, the growing radius raises the effective Rayleigh number until the growth rate turns positive, at $t = \log(\beta Ra_*^m/\beta Ra)$. Mode 2 decays for every $\beta Ra$. Press play to follow the droplet in time. Long before the fold, the amplitude is outside the range where linear theory applies, so treat the late shapes as illustrations.</figcaption>
+</figure>
+
+<h3 id="depth">Effect of depth<a class="anchor" href="#depth">¶</a></h3>
+
+<p>The constant $\kappa$ matches the semi-infinite inner solution to a finite fluid depth. It is chosen so that the vertical velocity on the axis vanishes at a depth $|H|$, measured in droplet radii. For large depths, $\kappa \sim 1 - \log 2|H|$, and $\kappa = 0$ corresponds to $|H| \approx 1$. A nonzero $\kappa$ adds a multiple of the growth pressure, and the short-wave threshold becomes</p>
+
+<div class="math-display">$$
+Ra_{*,\kappa} = \lim_{m\to\infty}\frac{1}{\beta}\,\frac{\tfrac12 - \sigma_g^m}{\sigma_b^m + \frac{\kappa}{16}\big(\sigma_g^m - \tfrac12\big)} = \frac{96}{\beta\,(1 - 6\kappa)} .
+$$</div>
+
+<p>Deeper fluid (more negative $\kappa$) lowers the threshold. If $\kappa &gt; 1/6$, every mode is stable.</p>
+
+<figure>
+<div class="widget" id="kappa-widget">
+  <div class="w-title">Matching constant and threshold against depth, $\beta = 1$</div>
+  <div class="sw-ctl">
+    <label for="kp-h"><span>effective depth, $|H|$</span><output id="kp-h-val"></output></label>
+    <div class="sw-row"><input type="range" id="kp-h" min="0" max="100" step="1" value="0"/><button id="kp-play" aria-label="Play depth">▶</button></div>
+  </div>
+  <dl class="sw-read">
+    <dt>matching constant, $\kappa$</dt><dd id="kp-k"></dd>
+    <dt>short-wave threshold, $Ra_{*,\kappa}$</dt><dd id="kp-ra"></dd>
+  </dl>
+  <div class="rw-panels">
+    <div class="rw-panel">
+      <div class="rw-plot">
+        <span class="rw-letter">(a)</span>
+        <div class="rw-ylabel">$\kappa$</div>
+        <svg id="kp-a" viewBox="0 0 420 300" role="img" aria-label="Matching constant kappa against depth"></svg>
+      </div>
+      <div class="rw-xlabel">depth, $|H|$</div>
+      <div class="legend">
+        <span><span class="sw sw-b"></span>$\kappa$</span>
+        <span><span class="sw sw-dash"></span>$1 - \log 2|H|$</span>
+      </div>
+    </div>
+    <div class="rw-panel">
+      <div class="rw-plot">
+        <span class="rw-letter">(b)</span>
+        <div class="rw-ylabel">$Ra_{*,\kappa}$</div>
+        <svg id="kp-b" viewBox="0 0 420 300" role="img" aria-label="Short-wave critical Rayleigh number against depth"></svg>
+      </div>
+      <div class="rw-xlabel">depth, $|H|$</div>
+    </div>
+  </div>
+</div>
+  <figcaption><b>Figure 9.</b> (a) The matching constant $\kappa$ (blue) against the effective depth $|H|$ over the experimental range $7/8 &lt; |H| &lt; 7$, with its large-depth asymptote (dashed). (b) The short-wave threshold $Ra_{*,\kappa}$ falls from about 121 to about 9 across this range, so it varies by about an order of magnitude. Instability is predicted at every depth in the range. The dashed line marks the $\kappa = 0$ value, 96. Move the slider or press play.</figcaption>
+</figure>
+</section>
+
+<!-- ═══════════════════════════════ NUMERICS ═══════════════════════════════ -->
+<section id="numerics" data-title="Numerical validation">
+<h2>Numerical validation<a class="anchor" href="#numerics">¶</a></h2>
+
+<p>The $O(1)$ and $O(\varepsilon)$ problems are also solved numerically by expanding in projected spherical harmonics up to degree $M$. Gauss–Legendre quadrature in $s = \sqrt{1 - r^2}$ and the trapezoidal rule in $\theta$ compute the coefficients. $\mathcal{S}_D$ and $\mathcal{N}_D$ are then applied, or inverted, through their eigenvalues. $\mathcal{V}_D$ uses singularity subtraction, and $\mathcal{B}_D$ uses the smooth rule directly. The growth coefficients are exact to rounding error, because the solution lies in the basis. The buoyancy coefficients converge like $M^{-4}$ and reach about eight digits at $M = 128$.</p>
+
+<div class="table-wrap">
+<table>
+  <thead><tr><th>$m$</th><th>$\sigma_g^m$ exact</th><th>numerical, $M = 32$</th><th>$\sigma_b^m$ exact</th><th>numerical, $M = 32$</th></tr></thead>
+  <tbody>
+    <tr><td>2</td><td class="num">−0.25</td><td class="num">−0.250000000000004</td><td class="num">−0.0015625</td><td class="num">−0.0015602</td></tr>
+    <tr><td>3</td><td class="num">−0.4375</td><td class="num">−0.437500000000005</td><td class="num">0.0064174</td><td class="num">0.0064206</td></tr>
+    <tr><td>4</td><td class="num">−0.59375</td><td class="num">−0.593750000000004</td><td class="num">0.0096571</td><td class="num">0.0096611</td></tr>
+    <tr><td>5</td><td class="num">−0.73047</td><td class="num">−0.730468750000010</td><td class="num">0.0117520</td><td class="num">0.0117570</td></tr>
+    <tr><td>8</td><td class="num">−1.07104</td><td class="num">−1.071044921875002</td><td class="num">0.0159711</td><td class="num">0.0159773</td></tr>
+  </tbody>
+</table>
+</div>
+</section>
+
+<!-- ═══════════════════════════════ CITING ═══════════════════════════════ -->
+<section id="citing" data-title="Citing">
+<h2>Citing<a class="anchor" href="#citing">¶</a></h2>
+
+<p>If you use this work, please cite the paper:</p>
+<p style="padding-left:1.25rem;border-left:3px solid var(--border)">V. Gomez Herrera and S. Weady, Instability of microbial droplets growing on viscous substrates, <em>Journal of Fluid Mechanics</em> (2026). <a href="https://doi.org/10.1017/jfm.2026.11721">doi:10.1017/jfm.2026.11721</a> · <a href="https://arxiv.org/abs/2602.13724">arXiv:2602.13724</a></p>
+
+<pre><code>@article{gomezherrera2026instability,
+  title   = {Instability of microbial droplets growing on viscous substrates},
+  author  = {Gomez Herrera, Vicente and Weady, Scott},
+  journal = {Journal of Fluid Mechanics},
+  year    = {2026},
+  doi     = {10.1017/jfm.2026.11721},
+  eprint  = {2602.13724},
+  archivePrefix = {arXiv}
+}</code></pre>
+
+<p>The experiments that motivate this work are described in S. Atis, B. T. Weinstein, A. W. Murray and D. R. Nelson, Microbial range expansions on liquid substrates, <em>Physical Review X</em> <b>9</b>, 021058 (2019).</p>
+
+<footer>
+  Source: <a href="https://github.com/scottweady/microbial-droplets">github.com/scottweady/microbial-droplets</a> · The Flatiron Institute is a division of the Simons Foundation.
+</footer>
+</section>
+
+  </article>
+</div>
+
+<script src="assets/plot.js"></script>
+<script src="assets/surface-data.js"></script>
+<script src="assets/surface-widget.js"></script>
+<script src="assets/bulk-data.js"></script>
+<script src="assets/bulk-widget.js"></script>
+<script src="assets/dispersion-widget.js"></script>
+<script src="assets/droplet-widget.js"></script>
+<script src="assets/kappa-data.js"></script>
+<script src="assets/kappa-widget.js"></script>
+<script>
+(function () {
+  /* Theme toggle: cycles to the opposite of what is currently shown */
+  var root = document.documentElement;
+  document.getElementById("theme-btn").addEventListener("click", function () {
+    var cur = root.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+    var next = cur === "dark" ? "light" : "dark";
+    root.setAttribute("data-theme", next);
+    try { localStorage.setItem("md-theme", next); } catch (e) {}
+  });
+
+  /* Mobile drawer */
+  var body = document.body;
+  document.getElementById("menu-btn").addEventListener("click", function (e) {
+    e.stopPropagation(); body.classList.toggle("menu-open");
+  });
+  document.querySelector(".main").addEventListener("click", function () { body.classList.remove("menu-open"); });
+  document.querySelectorAll(".sidebar a").forEach(function (a) {
+    a.addEventListener("click", function () { body.classList.remove("menu-open"); });
+  });
+
+  /* Scroll spy: highlight the current section and subsection in the sidebar */
+  var links = Array.prototype.slice.call(document.querySelectorAll(".sidebar nav a"));
+  var targets = links.map(function (a) { return document.getElementById(a.getAttribute("href").slice(1)); });
+  var crumb = document.getElementById("crumb");
+  function spy() {
+    var y = window.scrollY + 90, idx = 0;
+    targets.forEach(function (t, i) { if (t && t.getBoundingClientRect().top + window.scrollY <= y) idx = i; });
+    if (window.innerHeight + window.scrollY >= document.body.scrollHeight - 4) idx = targets.length - 1;
+    links.forEach(function (a) { a.classList.remove("active"); });
+    document.querySelectorAll(".sidebar li.open").forEach(function (li) { li.classList.remove("open"); });
+    var a = links[idx]; a.classList.add("active");
+    var top = a.closest(".sidebar nav > ul > li");
+    if (top) {
+      top.classList.add("open");
+      var sec = top.querySelector(":scope > a");
+      var title = sec.textContent;
+      if (sec !== a) { sec.classList.add("active"); title += " › " + a.textContent; }
+      crumb.textContent = title;
+    }
+  }
+  window.addEventListener("scroll", spy, { passive: true });
+  spy();
+
+  /* Math */
+  window.addEventListener("load", function () {
+    if (window.renderMathInElement) {
+      renderMathInElement(document.querySelector(".content"), {
+        delimiters: [
+          { left: "$$", right: "$$", display: true },
+          { left: "$", right: "$", display: false }
+        ],
+        throwOnError: false
+      });
+    }
+  });
+})();
+</script>
+</body>
+</html>

@@ -2,7 +2,7 @@
 .DS_Store
 
 local
-paper
+manuscript
 
 figs/output
 scripts/results
