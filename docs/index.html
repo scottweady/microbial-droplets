@@ -298,6 +298,21 @@ figcaption b { color: var(--fg); }
 .kp-asym { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-dasharray: 6 4; }
 .kp-dot { fill: var(--buoy); }
 .kp-guide { stroke: var(--buoy); }
+.kp-schem { margin: 0 0 0.9rem; }
+.kp-schem svg { display: block; width: 100%; max-width: 640px; height: auto; margin: 0 auto; }
+.kp-fluid { fill: color-mix(in srgb, var(--link) 9%, var(--bg)); }
+.kp-part { fill: #d48aa8; opacity: 0.55; }
+.kp-surf { stroke: var(--fg); stroke-width: 1.5; }
+.kp-wall { stroke: var(--fg); stroke-width: 2; }
+.kp-hatch { stroke: var(--muted); stroke-width: 1; }
+.kp-drop { fill: color-mix(in srgb, var(--accent) 30%, var(--bg)); stroke: var(--accent); stroke-width: 1.5; }
+.kp-axis { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 2 3; }
+.kp-ref { stroke: var(--muted); stroke-width: 1.2; stroke-dasharray: 5 4; }
+.kp-dim { stroke: var(--fg); stroke-width: 1.2; }
+.kp-head { fill: var(--fg); }
+.kp-stag { fill: var(--buoy); stroke: var(--bg); stroke-width: 1.5; }
+.kp-lab { fill: var(--muted); font-size: 13px; font-family: inherit; }
+.kp-math { fill: var(--fg); font-size: 16px; font-family: "Times New Roman", serif; font-style: italic; }
 
 .admonition {
   border-left: 5px solid var(--note-border); background: var(--note-bg);
@@ -814,6 +829,9 @@ $$</div>
     <dt>matching constant, $\kappa$</dt><dd id="kp-k"></dd>
     <dt>short-wave threshold, $Ra_{*,\kappa}$</dt><dd id="kp-ra"></dd>
   </dl>
+  <div class="kp-schem">
+    <svg id="kp-s" viewBox="0 0 640 268" role="img" aria-label="Cross-section, drawn to scale, of the droplet on a fluid layer whose depth follows the slider"></svg>
+  </div>
   <div class="rw-panels">
     <div class="rw-panel">
       <div class="rw-plot">
@@ -837,7 +855,7 @@ $$</div>
     </div>
   </div>
 </div>
-  <figcaption><b>Figure 9.</b> (a) The matching constant $\kappa$ (blue) against the effective depth $|H|$ over the experimental range $7/8 &lt; |H| &lt; 7$, with its large-depth asymptote (dashed). (b) The short-wave threshold $Ra_{*,\kappa}$ falls from about 121 to about 9 across this range, so it varies by about an order of magnitude. Instability is predicted at every depth in the range. The dashed line marks the $\kappa = 0$ value, 96. Move the slider or press play.</figcaption>
+  <figcaption><b>Figure 9.</b> Top: a cross-section, drawn to scale, through the droplet (green, radius 1) on a layer of depth $|H|$. The vertical velocity on the axis (dotted) vanishes at the bottom, which sets $\kappa$. The dashed line marks the depth where $\kappa = 0$. (a) The matching constant $\kappa$ (blue) against the effective depth $|H|$ over the experimental range $7/8 &lt; |H| &lt; 7$, with its large-depth asymptote (dashed). (b) The short-wave threshold $Ra_{*,\kappa}$ falls from about 121 to about 9 across this range, so it varies by about an order of magnitude. Instability is predicted at every depth in the range. The dashed line marks the $\kappa = 0$ value, 96. Move the slider or press play.</figcaption>
 </figure>
 </section>
 
@@ -881,7 +899,7 @@ $$</div>
 <p>The experiments that motivate this work are described in S. Atis, B. T. Weinstein, A. W. Murray and D. R. Nelson, Microbial range expansions on liquid substrates, <em>Physical Review X</em> <b>9</b>, 021058 (2019).</p>
 
 <footer>
-  Source: <a href="https://github.com/scottweady/microbial-droplets">github.com/scottweady/microbial-droplets</a> · The Flatiron Institute is a division of the Simons Foundation.
+  Source: <a href="https://github.com/scottweady/microbial-droplets">github.com/scottweady/microbial-droplets</a>
 </footer>
 </section>
 
